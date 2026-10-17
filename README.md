@@ -19,3 +19,19 @@ C4-ComeTrue의 [Opener-Market 과제](assignment/opener-market.md)를 각자 구
 - 테스트 커버리지 80% 이상
 - SonarCloud Major 이슈 0
 - 네이버 핵데이 Java 컨벤션 (checkstyle)
+
+## 프로젝트 설정
+레포 루트에 Spring Boot(Gradle, Java 21) 프로젝트를 만들고, `build.gradle`에 아래 두 가지를 추가합니다.
+커버리지·checkstyle·SonarCloud 설정은 `main`의 [`gradle/quality.gradle`](gradle/quality.gradle)에서 공통으로 관리합니다.
+
+```groovy
+plugins {
+    // ... Spring Boot 기본 플러그인
+    id 'org.sonarqube' version '7.5.0.8588'
+}
+
+apply from: 'gradle/quality.gradle'
+```
+
+- `./gradlew build`에 테스트, checkstyle(경고 0개), 라인 커버리지 80% 검증이 포함됩니다.
+- 공통 설정이 바뀌면 `main`을 대표 브랜치에 병합해 반영합니다.

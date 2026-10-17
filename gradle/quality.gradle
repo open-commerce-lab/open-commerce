@@ -1,0 +1,62 @@
+// 스터디 공통 품질 설정: 테스트 커버리지 80%, 네이버 컨벤션(checkstyle), SonarCloud
+// 사용법은 README의 "프로젝트 설정" 참고
+
+apply plugin: 'jacoco'
+apply plugin: 'checkstyle'
+
+def coverageExcludes = [
+        '**/*Application*',
+]
+def coverageClasses = sourceSets.main.output.classesDirs.asFileTree.matching {
+    exclude coverageExcludes
+}
+
+checkstyle {
+    configFile = rootProject.file('naver-checkstyle.xml')
+    configProperties = [suppressionFile: rootProject.file('naver-checkstyle-suppressions.xml').path]
+    maxWarnings = 0
+}
+
+tasks.named('test') {
+    finalizedBy 'jacocoTestReport'
+}
+
+tasks.named('jacocoTestReport') {
+    dependsOn 'test'
+    reports {
+        xml.required = true
+        html.required = true
+    }
+    classDirectories.setFrom(coverageClasses)
+}
+
+tasks.named('jacocoTestCoverageVerification') {
+    dependsOn 'test'
+    violationRules {
+        rule {
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.80
+            }
+        }
+    }
+    classDirectories.setFrom(coverageClasses)
+}
+
+tasks.named('check') {
+    dependsOn 'jacocoTestCoverageVerification'
+}
+
+plugins.withId('org.sonarqube') {
+    sonar {
+        properties {
+            property 'sonar.organization', 'open-commerce-lab'
+            property 'sonar.projectKey', 'open-commerce-lab_open-commerce'
+            property 'sonar.host.url', 'https://sonarcloud.io'
+            property 'sonar.coverage.jacoco.xmlReportPaths',
+                    layout.buildDirectory.file('reports/jacoco/test/jacocoTestReport.xml').get().asFile.path
+            property 'sonar.coverage.exclusions', coverageExcludes.join(',')
+        }
+    }
+}

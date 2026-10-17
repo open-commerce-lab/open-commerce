@@ -9,7 +9,8 @@ if ! printf '%s' "$subject" | grep -Eq '^(fix|feat|refactor|docs|style|test|chor
   exit 1
 fi
 body=$(printf '%s' "$subject" | sed -E 's/^[a-z]+: //')
-if [ "$(printf '%s' "$body" | wc -m)" -gt 50 ]; then
+# wc -m은 로케일에 따라 바이트를 세므로, UTF-8 연속 바이트(0x80-0xBF)를 지우고 남은 바이트 수로 글자 수를 센다
+if [ "$(printf '%s' "$body" | LC_ALL=C tr -d '\200-\277' | wc -c)" -gt 50 ]; then
   echo "subject는 50글자 이하여야 합니다"
   exit 1
 fi
