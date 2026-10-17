@@ -1,0 +1,61 @@
+name: CI
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches-ignore:
+      - 'feature/**'
+
+jobs:
+  commit-lint:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check commit messages
+        run: |
+          python3 - <<'PY'
+          import re, subprocess, sys
+          base = "${{ github.event.pull_request.base.sha }}"
+          head = "${{ github.event.pull_request.head.sha }}"
+          subjects = subprocess.run(["git", "log", "--format=%s", f"{base}..{head}"],
+                                    capture_output=True, text=True, check=True).stdout.splitlines()
+          bad = []
+          for s in subjects:
+              if s.startswith(("Merge", "Revert")):
+                  continue
+              m = re.match(r"^(fix|feat|refactor|docs|style|test|chore): (.+)$", s)
+              if not m or len(m.group(2)) > 50 or re.search(r"[.!?,;:]$", m.group(2)):
+                  bad.append(s)
+          for s in bad:
+              print(f"::error::커밋 메시지 규칙 위반: {s}")
+          sys.exit(1 if bad else 0)
+          PY
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Detect Gradle project
+        id: detect
+        run: |
+          if [ -f gradlew ]; then echo "gradle=true" >> "$GITHUB_OUTPUT"; else echo "gradle=false" >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/setup-java@v4
+        if: steps.detect.outputs.gradle == 'true'
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+      - uses: gradle/actions/setup-gradle@v4
+        if: steps.detect.outputs.gradle == 'true'
+      - name: Build, coverage, analyze
+        if: steps.detect.outputs.gradle == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          chmod +x gradlew
+          ./gradlew build jacocoTestReport sonar

@@ -1,0 +1,19 @@
+#!/bin/sh
+# C4 커밋 규칙: "type: subject", subject 50자 이하, 끝에 특수문자 없음
+subject=$(head -n 1 "$1")
+case "$subject" in
+  Merge*|Revert*|fixup!*|squash!*) exit 0 ;;
+esac
+if ! printf '%s' "$subject" | grep -Eq '^(fix|feat|refactor|docs|style|test|chore): .+'; then
+  echo "커밋 제목은 'type: subject' 형식이어야 합니다 (type: fix|feat|refactor|docs|style|test|chore)"
+  exit 1
+fi
+body=$(printf '%s' "$subject" | sed -E 's/^[a-z]+: //')
+if [ "$(printf '%s' "$body" | wc -m)" -gt 50 ]; then
+  echo "subject는 50글자 이하여야 합니다"
+  exit 1
+fi
+if printf '%s' "$body" | grep -Eq '[.!?,;:]$'; then
+  echo "subject 끝에 특수문자를 넣지 않습니다"
+  exit 1
+fi
