@@ -20,17 +20,35 @@ jobs:
           import re, subprocess, sys
           base = "${{ github.event.pull_request.base.sha }}"
           head = "${{ github.event.pull_request.head.sha }}"
-          subjects = subprocess.run(["git", "log", "--format=%s", f"{base}..{head}"],
-                                    capture_output=True, text=True, check=True).stdout.splitlines()
-          bad = []
-          for s in subjects:
-              if s.startswith(("Merge", "Revert")):
+          log = subprocess.run(["git", "log", "--format=%h%x00%B%x1e", f"{base}..{head}"],
+                               capture_output=True, text=True, check=True).stdout
+          bad = False
+          for entry in filter(str.strip, log.split("\x1e")):
+              sha, message = entry.strip("\n").split("\x00", 1)
+              lines = message.splitlines()
+              subject = lines[0] if lines else ""
+              if subject.startswith(("Merge", "Revert")):
                   continue
-              m = re.match(r"^(fix|feat|refactor|docs|style|test|chore): (.+)$", s)
-              if not m or len(m.group(2)) > 50 or re.search(r"[.!?,;:]$", m.group(2)):
-                  bad.append(s)
-          for s in bad:
-              print(f"::error::커밋 메시지 규칙 위반: {s}")
+              errors = []
+              m = re.match(r"^(fix|feat|refactor|docs|style|test|chore): (.+)$", subject)
+              if not m:
+                  errors.append("제목은 'type: subject' 형식이어야 합니다")
+              elif len(m.group(2)) > 50:
+                  errors.append("subject는 50글자 이하여야 합니다")
+              elif re.search(r"[.!?,;:]$", m.group(2)):
+                  errors.append("subject 끝에 특수문자를 넣지 않습니다")
+              if len(lines) > 1 and lines[1].strip():
+                  errors.append("제목과 본문 사이에는 빈 줄이 있어야 합니다")
+              for no, line in enumerate(lines[2:], start=3):
+                  if not line.strip() or re.match(r"^[A-Za-z][A-Za-z-]*-[Bb][Yy]: ", line):
+                      continue
+                  if not re.match(r"^\s*- ", line):
+                      errors.append(f"본문은 각 줄을 불릿(- )으로 작성해야 합니다: {line}")
+                  elif len(line) > 72:
+                      print(f"::warning::{sha} 본문 {no}번째 줄이 72자를 넘습니다: {subject}")
+              for error in errors:
+                  print(f"::error::{sha} {error}: {subject}")
+              bad = bad or bool(errors)
           sys.exit(1 if bad else 0)
           PY
 
