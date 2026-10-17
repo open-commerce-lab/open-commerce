@@ -13,6 +13,7 @@ C4-ComeTrue의 [Opener-Market 과제](assignment/opener-market.md)를 각자 구
 - PR은 `대표 브랜치 ← Step 브랜치`. 다른 참가자 1명 이상 승인 필수, 리뷰어는 참가자 전원 지정 권장.
 - 포크하지 말고 이 레포에 직접 브랜치를 올립니다(포크 PR에는 SonarCloud 토큰이 전달되지 않음).
 - 클론 후 `git config core.hooksPath .githooks` 한 번 실행.
+- 설계와 성능 목표는 공통 [서비스 규모 가정](docs/scale-assumptions.md)을 기준으로 합니다.
 
 ## 검사 기준 (PR 병합 조건)
 - 커밋: `type: subject` (subject 50자 이하, 끝 특수문자 없음, 제목과 본문 사이 빈 줄, 본문은 줄마다 불릿, 한 줄 72자 이하 권장)
